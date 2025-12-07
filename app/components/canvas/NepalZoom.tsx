@@ -79,7 +79,7 @@ export default function NepalZoom({ position = [0, 0, 0], scrollProgress, visibl
                     </mesh>
                 </group>
 
-                {/* Location Marker for Sagarmatha, Jhapa */}
+                {/* Location Marker for Sagarmatha Chowk, Jhapa */}
                 <group ref={markerRef} position={[4, 1.5, 2]}>
                     {/* Pin */}
                     <mesh>
@@ -126,7 +126,7 @@ export default function NepalZoom({ position = [0, 0, 0], scrollProgress, visibl
                     anchorX="center"
                     anchorY="middle"
                 >
-                    SAGARMATHA, JHAPA
+                    Sagarmatha Chowk, JHAPA
                     <meshStandardMaterial
                         color="#ffffff"
                         emissive="#ffffff"

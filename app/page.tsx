@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useScrollProgress } from './hooks/useScrollProgress';
-import { GAMES } from './utils/constants';
+import { IGame } from '@/models/Game';
+import { IHallOfShame } from '@/models/HallOfShame';
 
 const Scene = dynamic(() => import('./components/canvas/Scene'), {
   ssr: false,
@@ -25,10 +26,29 @@ const PHASES = [
 export default function Home() {
   const [showContent, setShowContent] = useState(false);
   const { progress } = useScrollProgress();
+  const [games, setGames] = useState<IGame[]>([]);
+  const [hallOfShame, setHallOfShame] = useState<IHallOfShame[]>([]);
 
   useEffect(() => {
     setTimeout(() => setShowContent(true), 1200);
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      const [gamesRes, shameRes] = await Promise.all([
+        fetch('/api/games'),
+        fetch('/api/hall-of-shame')
+      ]);
+      const gamesData = await gamesRes.json();
+      const shameData = await shameRes.json();
+
+      if (gamesData.success) setGames(gamesData.data);
+      if (shameData.success) setHallOfShame(shameData.data.slice(0, 3)); // Only show top 3
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
 
   // Calculate current phase
   const phaseIndex = Math.min(
@@ -40,6 +60,12 @@ export default function Home() {
   const scrollTo = (targetProgress: number) => {
     const docHeight = document.documentElement.scrollHeight - window.innerHeight;
     window.scrollTo({ top: targetProgress * docHeight, behavior: 'smooth' });
+  };
+
+  // Helper to generate random color for games if not provided (fallback)
+  const getGameColor = (index: number) => {
+    const colors = ['#ff00ff', '#00d4ff', '#00ff00', '#ff0000', '#ffff00'];
+    return colors[index % colors.length];
   };
 
   return (
@@ -58,7 +84,7 @@ export default function Home() {
             </div>
             <div className="hidden md:block">
               <p className="text-white font-bold text-lg tracking-wider">GAMEHUB</p>
-              <p className="text-[10px] text-[#ff00ff] uppercase tracking-widest">Sagarmatha, Jhapa</p>
+              <p className="text-[10px] text-[#ff00ff] uppercase tracking-widest">Sagarmatha Chowk, Jhapa</p>
             </div>
           </button>
 
@@ -114,9 +140,9 @@ export default function Home() {
               </span>
             </h1>
             <p className="text-xl md:text-2xl text-white mb-2">Play. Compete. Repeat.</p>
-            <p className="text-gray-400 mb-8">Premium Gaming in Sagarmatha, Jhapa</p>
+            <p className="text-gray-400 mb-8">Premium Gaming in Sagarmatha Chowk, Jhapa</p>
 
-            <div className="flex items-center justify-center gap-4 pointer-events-auto">
+            <div className={`flex items-center justify-center gap-4 ${phaseIndex === 0 ? 'pointer-events-auto' : 'pointer-events-none'}`}>
               <button
                 onClick={() => scrollTo(0.35)}
                 className="px-8 py-4 bg-gradient-to-r from-[#ff00ff] to-[#ff00aa] rounded-lg font-bold text-white uppercase tracking-wider hover:scale-105 transition-transform"
@@ -134,20 +160,25 @@ export default function Home() {
           <div className={`fixed inset-0 z-20 pointer-events-none transition-all duration-500 ${phaseIndex === 1 ? 'opacity-100' : 'opacity-0'
             }`}>
             <div className="absolute top-1/2 right-8 -translate-y-1/2 max-w-sm">
-              <div className="bg-black/70 backdrop-blur-xl rounded-2xl p-6 border border-[#ff00ff]/30 pointer-events-auto">
+              <div className={`bg-black/70 backdrop-blur-xl rounded-2xl p-6 border border-[#ff00ff]/30 ${phaseIndex === 1 ? 'pointer-events-auto' : 'pointer-events-none'}`}>
                 <p className="text-[#00d4ff] text-xs uppercase tracking-widest mb-2">Game Library</p>
                 <h3 className="text-2xl font-bold text-white mb-4">Choose Your Game</h3>
                 <div className="space-y-2">
-                  {GAMES.slice(0, 4).map((game) => (
-                    <div key={game.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
-                      <div className="w-3 h-3 rounded-full" style={{ background: game.color }} />
+                  {games.slice(0, 4).map((game, i) => (
+                    <div key={String(game._id)} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
+                      <div className="w-3 h-3 rounded-full" style={{ background: getGameColor(i) }} />
                       <span className="text-white">{game.name}</span>
                     </div>
                   ))}
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
-                    <div className="w-3 h-3 rounded-full" style={{ background: "red" }} />
-                    <span className="text-white">and 99+ others</span>
-                  </div>
+                  {games.length > 4 && (
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
+                      <div className="w-3 h-3 rounded-full" style={{ background: "red" }} />
+                      <span className="text-white">and {games.length - 4} others</span>
+                    </div>
+                  )}
+                  {games.length === 0 && (
+                    <p className="text-gray-500 text-sm">Loading games...</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -157,16 +188,19 @@ export default function Home() {
           <div className={`fixed inset-0 z-20 pointer-events-none transition-all duration-500 ${phaseIndex === 2 ? 'opacity-100' : 'opacity-0'
             }`}>
             <div className="absolute top-1/2 left-8 -translate-y-1/2 max-w-sm">
-              <div className="bg-black/70 backdrop-blur-xl rounded-2xl p-6 border border-[#00d4ff]/30 pointer-events-auto">
+              <div className={`bg-black/70 backdrop-blur-xl rounded-2xl p-6 border border-[#00d4ff]/30 ${phaseIndex === 2 ? 'pointer-events-auto' : 'pointer-events-none'}`}>
                 <p className="text-[#ff00ff] text-xs uppercase tracking-widest mb-2">More Games</p>
                 <h3 className="text-2xl font-bold text-white mb-4">Action Awaits</h3>
                 <div className="space-y-2">
-                  {GAMES.slice(2).map((game) => (
-                    <div key={game.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
-                      <div className="w-3 h-3 rounded-full" style={{ background: game.color }} />
+                  {games.slice(4, 8).map((game, i) => (
+                    <div key={String(game._id)} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
+                      <div className="w-3 h-3 rounded-full" style={{ background: getGameColor(i + 4) }} />
                       <span className="text-white">{game.name}</span>
                     </div>
                   ))}
+                  {games.length <= 4 && (
+                    <p className="text-gray-500 text-sm">Check back later for more games!</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -176,7 +210,7 @@ export default function Home() {
           <div className={`fixed inset-0 z-20 pointer-events-none transition-all duration-500 ${phaseIndex === 3 ? 'opacity-100' : 'opacity-0'
             }`}>
             <div className="absolute top-1/2 right-8 -translate-y-1/2 max-w-sm">
-              <div className="bg-black/70 backdrop-blur-xl rounded-2xl p-6 border border-[#ff00ff]/30 pointer-events-auto">
+              <div className={`bg-black/70 backdrop-blur-xl rounded-2xl p-6 border border-[#ff00ff]/30 ${phaseIndex === 3 ? 'pointer-events-auto' : 'pointer-events-none'}`}>
                 <p className="text-[#ff00ff] text-xs uppercase tracking-widest mb-2">Pricing</p>
                 <div className="flex items-baseline gap-2 mb-4">
                   <span className="text-5xl font-black text-white">Rs. 200</span>
@@ -198,7 +232,7 @@ export default function Home() {
           <div className={`fixed inset-0 z-20 pointer-events-none transition-all duration-500 ${phaseIndex === 4 ? 'opacity-100' : 'opacity-0'
             }`}>
             {/* Scattered items container */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-auto">
+            <div className={`absolute inset-0 overflow-hidden ${phaseIndex === 4 ? 'pointer-events-auto' : 'pointer-events-none'}`}>
               {[
                 { icon: '🎮', title: 'Pro Controllers', desc: 'DualShock 4', pos: 'top-[15%] left-[5%]' },
                 { icon: '📺', title: 'HD Displays', desc: 'Crystal clear 4K', pos: 'top-[15%] right-[5%]' },
@@ -240,8 +274,8 @@ export default function Home() {
           {/* Hall of Shame Phase */}
           <div className={`fixed inset-0 z-20 pointer-events-none transition-all duration-500 ${phaseIndex === 5 ? 'opacity-100' : 'opacity-0'
             }`}>
-            <div className="absolute top-1/2 right-8 md:right-16 -translate-y-1/2 w-full max-w-md">
-              <div className="text-right mb-8 pointer-events-auto">
+            <div className="absolute top-1/2 left-4 right-4 md:left-auto md:right-16 -translate-y-1/2 md:w-full md:max-w-md">
+              <div className={`text-right mb-8 ${phaseIndex === 5 ? 'pointer-events-auto' : 'pointer-events-none'}`}>
                 <h2 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#ff00ff] to-red-500 animate-pulse" style={{ textShadow: '0 0 20px rgba(255,0,0,0.5)' }}>
                   HALL OF SHAME
                 </h2>
@@ -250,37 +284,43 @@ export default function Home() {
                 </p>
               </div>
 
-              <div className="space-y-4 pointer-events-auto">
-                {[
-                  { game: 'FC 26', winner: 'Prashant', loser: 'Ram', score: '3 - 0', time: '2 mins ago' },
-                  { game: 'WWE 2K25', winner: 'Aayush', loser: 'Sujan', score: 'Pinfall', time: '1 hour ago' },
-                  { game: 'Tekken 8', winner: 'Rohan', loser: 'Bibek', score: 'KO', time: 'Yesterday' },
-                ].map((match, i) => (
-                  <div key={i} className="bg-black/80 backdrop-blur-xl border-l-4 border-[#ff00ff] rounded-r-xl p-4 relative overflow-hidden group hover:translate-x-2 transition-transform">
+              <div className={`space-y-4 ${phaseIndex === 5 ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+                {hallOfShame.map((entry, i) => (
+                  <div key={String(entry._id)} className="bg-black/80 backdrop-blur-xl border-l-4 border-[#ff00ff] rounded-r-xl p-4 relative overflow-hidden group hover:translate-x-2 transition-transform">
                     <div className="absolute inset-0 bg-gradient-to-r from-[#ff00ff]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
                     <div className="flex justify-between items-start relative z-10">
                       <div>
                         <span className="text-xs font-bold text-[#00d4ff] bg-[#00d4ff]/10 px-2 py-1 rounded mb-2 inline-block">
-                          {match.game}
+                          {entry.game.name}
                         </span>
                         <div className="flex items-center gap-2 text-lg">
                           <span className="font-black text-white text-xl drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]">
-                            {match.winner}
+                            {entry.winner.name}
                           </span>
                           <span className="text-gray-500 text-xs uppercase">def.</span>
                           <span className="text-red-400 font-medium line-through decoration-red-500/50">
-                            {match.loser}
+                            {entry.loser.name}
                           </span>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-2xl font-black text-white italic">{match.score}</p>
-                        <p className="text-[10px] text-gray-500">{match.time}</p>
+                        <p className="text-2xl font-black text-white italic">
+                          {entry.result.type === 'Score'
+                            ? `${entry.result.scoreWinner} - ${entry.result.scoreLoser}`
+                            : entry.result.type}
+                        </p>
+                        <p className="text-[10px] text-gray-500">{new Date(entry.date).toLocaleDateString()}</p>
                       </div>
                     </div>
                   </div>
                 ))}
+
+                {hallOfShame.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No shame entries yet. Be the first!</p>
+                  </div>
+                )}
 
                 <div className="mt-6 text-center">
                   <Link href="/leaderboard" className="text-xs text-gray-500 hover:text-white transition-colors uppercase tracking-widest border-b border-gray-700 hover:border-white pb-1">
@@ -294,10 +334,10 @@ export default function Home() {
           {/* Final Phase - Location */}
           <div className={`fixed inset-0 flex items-center justify-center z-20 pointer-events-none transition-all duration-500 ${phaseIndex === 6 ? 'opacity-100' : 'opacity-0'
             }`}>
-            <div className="text-center px-4 pointer-events-auto">
+            <div className={`text-center px-4 ${phaseIndex === 6 ? 'pointer-events-auto' : 'pointer-events-none'}`}>
               <p className="text-[#ff00ff] text-sm uppercase tracking-widest mb-4">📍 Find Us</p>
               <h2 className="text-4xl md:text-6xl font-black text-white mb-2">
-                SAGARMATHA, JHAPA
+                Sagarmatha Chowk, JHAPA
               </h2>
               <p className="text-xl text-gray-400 mb-8">Eastern Nepal</p>
 

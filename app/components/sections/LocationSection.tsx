@@ -18,7 +18,7 @@ export default function LocationSection({ visible }: LocationSectionProps) {
                 </h2>
 
                 <p className="text-body max-w-xl mx-auto mb-12">
-                    Find us at the heart of Sagarmatha, Jhapa.
+                    Find us at the heart of Sagarmatha Chowk, Jhapa.
                     Your gaming adventure awaits!
                 </p>
 
@@ -32,7 +32,7 @@ export default function LocationSection({ visible }: LocationSectionProps) {
                             <div className="text-left">
                                 <h3 className="font-bold text-white mb-1">Address</h3>
                                 <p className="text-gray-400">
-                                    Sagarmatha, Jhapa<br />
+                                    Sagarmatha Chowk, Jhapa<br />
                                     Nepal
                                 </p>
                             </div>

@@ -25,7 +25,7 @@ export default function HeroSection({ visible }: HeroSectionProps) {
 
                     <GlassPanel className="inline-block max-w-md mx-auto relative">
                         <p className="text-body">
-                            Experience gaming like never before at Sagarmatha&apos;s premier console gaming station.
+                            Experience gaming like never before at Sagarmatha Chowk&apos;s premier console gaming station.
                         </p>
                     </GlassPanel>
 

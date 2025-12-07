@@ -102,7 +102,7 @@ export default function MapPin({ position = [0, 0, 0], visible = true }: MapPinP
                     anchorX="center"
                     anchorY="middle"
                 >
-                    Sagarmatha, Jhapa
+                    Sagarmatha Chowk, Jhapa
                     <meshStandardMaterial
                         color="#ffffff"
                         emissive="#ffffff"

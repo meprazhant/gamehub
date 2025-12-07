@@ -14,13 +14,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "MT Gamehub |  Gaming Station | Sagarmatha, Bhardapur, Jhapa",
-  description: "Experience premium  gaming at MT Gamehub. Play the latest games including FC 26, WWE 2K25, GTA V, and more. Located in Sagarmatha, Jhapa.",
-  keywords: ["gaming", "PlayStation", "gaming station", "Jhapa", "Sagarmatha", "Bhardapur", "Nepal", "MT Gamehub"],
+  title: "MT Gamehub |  Gaming Station | Sagarmatha Chowk, Bhardapur, Jhapa",
+  description: "Experience premium  gaming at MT Gamehub. Play the latest games including FC 26, WWE 2K25, GTA V, and more. Located in Sagarmatha Chowk, Jhapa.",
+  keywords: ["gaming", "PlayStation", "gaming station", "Jhapa", "Sagarmatha Chowk", "Bhardapur", "Nepal", "MT Gamehub"],
   authors: [{ name: "MT Gamehub" }],
   openGraph: {
     title: "MT Gamehub |  Gaming Station at Jhapa, Bhardapur",
-    description: "Play. Compete. Repeat. Premium  gaming in Sagarmatha, Jhapa.",
+    description: "Play. Compete. Repeat. Premium  gaming in Sagarmatha Chowk, Jhapa.",
     type: "website",
     images: [
       {

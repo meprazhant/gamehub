@@ -1,31 +1,87 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-
-// Dummy data for the leaderboard
-const LEADERBOARD_DATA = [
-    { id: 1, game: 'FC 26', winner: 'Prashant', loser: 'Ram', score: '3 - 0', date: '2024-02-28', quote: 'Easy win.' },
-    { id: 2, game: 'WWE 2K25', winner: 'Aayush', loser: 'Sujan', score: 'Pinfall', date: '2024-02-28', quote: 'You cant see me!' },
-    { id: 3, game: 'Tekken 8', winner: 'Rohan', loser: 'Bibek', score: 'KO', date: '2024-02-27', quote: 'Perfect KO.' },
-    { id: 4, game: 'Mortal Kombat 1', winner: 'Sabin', loser: 'Niraj', score: 'Fatality', date: '2024-02-26', quote: 'Flawless Victory.' },
-    { id: 5, game: 'FC 26', winner: 'Kiran', loser: 'Amit', score: '5 - 1', date: '2024-02-25', quote: 'Total domination.' },
-    { id: 6, game: 'GTA V', winner: 'Team A', loser: 'Team B', score: 'Heist', date: '2024-02-24', quote: 'Money in the bag.' },
-    { id: 7, game: 'UFC 5', winner: 'Dipesh', loser: 'Rabin', score: 'Sub', date: '2024-02-23', quote: 'Tap out.' },
-    { id: 8, game: 'NBA 2K25', winner: 'Sanjay', loser: 'Bikash', score: '80 - 65', date: '2024-02-22', quote: 'Dunked on.' },
-];
+import { useState, useEffect, useRef } from 'react';
+import { IHallOfShame } from '@/models/HallOfShame';
+import html2canvas from 'html2canvas';
+import ShareCard from '../components/ui/ShareCard';
+import ShareModal from '../components/ui/ShareModal';
 
 export default function LeaderboardPage() {
     const [filter, setFilter] = useState('All');
+    const [leaderboardData, setLeaderboardData] = useState<IHallOfShame[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [activeShareEntry, setActiveShareEntry] = useState<IHallOfShame | null>(null);
+    const [shareModalOpen, setShareModalOpen] = useState(false);
+    const [shareImageBlob, setShareImageBlob] = useState<Blob | null>(null);
+    const shareCardRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const fetchData = async () => {
+        try {
+            const res = await fetch('/api/hall-of-shame');
+            const data = await res.json();
+            if (data.success) {
+                setLeaderboardData(data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching leaderboard:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleShare = async (entry: IHallOfShame) => {
+        setActiveShareEntry(entry);
+
+        // Wait for render
+        setTimeout(async () => {
+            if (!shareCardRef.current) return;
+
+            try {
+                const canvas = await html2canvas(shareCardRef.current, {
+                    scale: 1, // 1080x1920 is already high res
+                    backgroundColor: '#050508',
+                    useCORS: true, // For external images if any
+                });
+
+                canvas.toBlob(async (blob) => {
+                    if (!blob) return;
+                    setShareImageBlob(blob);
+                    setShareModalOpen(true);
+                    setActiveShareEntry(null); // Cleanup card render, keep modal open
+                }, 'image/png');
+            } catch (error) {
+                console.error('Error generating image:', error);
+                setActiveShareEntry(null);
+            }
+        }, 100);
+    };
 
     const filteredData = filter === 'All'
-        ? LEADERBOARD_DATA
-        : LEADERBOARD_DATA.filter(item => item.game === filter);
+        ? leaderboardData
+        : leaderboardData.filter(item => item.game.name === filter);
 
-    const uniqueGames = ['All', ...Array.from(new Set(LEADERBOARD_DATA.map(item => item.game)))];
+    const uniqueGames = ['All', ...Array.from(new Set(leaderboardData.map(item => item.game.name)))];
 
     return (
         <div className="min-h-screen bg-[#050508] text-white overflow-x-hidden selection:bg-[#ff00ff] selection:text-white">
+
+            {/* Hidden Share Card Container */}
+            <div className="fixed left-[-9999px] top-0">
+                {activeShareEntry && (
+                    <ShareCard ref={shareCardRef} entry={activeShareEntry} />
+                )}
+            </div>
+
+            <ShareModal
+                isOpen={shareModalOpen}
+                onClose={() => setShareModalOpen(false)}
+                imageBlob={shareImageBlob}
+            />
 
             {/* Navbar Placeholder */}
             <nav className="fixed top-0 left-0 right-0 z-50 p-6 flex justify-between items-center bg-black/50 backdrop-blur-md border-b border-white/5">
@@ -88,8 +144,8 @@ export default function LeaderboardPage() {
                             key={game}
                             onClick={() => setFilter(game)}
                             className={`px-6 py-2 rounded-full text-sm font-bold uppercase tracking-wider transition-all ${filter === game
-                                    ? 'bg-[#00d4ff] text-black scale-105'
-                                    : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                                ? 'bg-[#00d4ff] text-black scale-105'
+                                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
                                 }`}
                         >
                             {game}
@@ -99,61 +155,72 @@ export default function LeaderboardPage() {
 
                 {/* Leaderboard List */}
                 <div className="grid gap-4 max-w-4xl mx-auto">
-                    {filteredData.map((item) => (
-                        <div
-                            key={item.id}
-                            className="group relative bg-black/40 backdrop-blur-md border border-white/10 rounded-xl p-6 overflow-hidden hover:border-[#ff00ff]/50 transition-all hover:transform hover:scale-[1.01]"
-                        >
-                            {/* Hover Gradient */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-[#ff00ff]/10 via-transparent to-[#00d4ff]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    {loading ? (
+                        <div className="text-center text-gray-500 py-10">Loading shame...</div>
+                    ) : filteredData.length === 0 ? (
+                        <div className="text-center text-gray-500 py-10">No entries found. Be the first to shame someone!</div>
+                    ) : (
+                        filteredData.map((item, index) => (
+                            <div
+                                key={String(item._id)}
+                                onClick={() => handleShare(item)}
+                                className="group relative bg-black/40 backdrop-blur-md border border-white/10 rounded-xl p-6 overflow-hidden hover:border-[#ff00ff]/50 transition-all hover:transform hover:scale-[1.01] cursor-pointer"
+                            >
+                                {/* Hover Gradient */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-[#ff00ff]/10 via-transparent to-[#00d4ff]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-                            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+                                <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
 
-                                {/* Game & Date */}
-                                <div className="flex items-center gap-4 w-full md:w-auto">
-                                    <div className="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center text-xl font-bold text-gray-500 group-hover:text-white transition-colors">
-                                        {item.id}
+                                    {/* Game & Date */}
+                                    <div className="flex items-center gap-4 w-full md:w-auto">
+                                        <div className="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center text-xl font-bold text-gray-500 group-hover:text-white transition-colors">
+                                            {index + 1}
+                                        </div>
+                                        <div>
+                                            <span className="text-[#00d4ff] text-xs font-bold uppercase tracking-widest block mb-1">
+                                                {item.game.name}
+                                            </span>
+                                            <span className="text-gray-500 text-xs">
+                                                {new Date(item.date).toLocaleDateString()}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <span className="text-[#00d4ff] text-xs font-bold uppercase tracking-widest block mb-1">
-                                            {item.game}
-                                        </span>
-                                        <span className="text-gray-500 text-xs">
-                                            {item.date}
-                                        </span>
-                                    </div>
-                                </div>
 
-                                {/* Matchup */}
-                                <div className="flex-1 flex items-center justify-center gap-4 md:gap-8">
-                                    <div className="text-right">
-                                        <p className="text-xl md:text-2xl font-black text-white group-hover:text-[#ff00ff] transition-colors">
-                                            {item.winner}
+                                    {/* Matchup */}
+                                    <div className="flex-1 flex items-center justify-center gap-4 md:gap-8">
+                                        <div className="text-right">
+                                            <p className="text-xl md:text-2xl font-black text-white group-hover:text-[#ff00ff] transition-colors">
+                                                {item.winner.name}
+                                            </p>
+                                            <p className="text-xs text-green-400 uppercase tracking-wider font-bold">Winner</p>
+                                        </div>
+
+                                        <div className="text-2xl font-black text-gray-700 italic">VS</div>
+
+                                        <div className="text-left">
+                                            <p className="text-xl md:text-2xl font-bold text-gray-400 line-through decoration-red-500/50 decoration-2">
+                                                {item.loser.name}
+                                            </p>
+                                            <p className="text-xs text-red-500 uppercase tracking-wider font-bold">Loser</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Score & Quote */}
+                                    <div className="text-center md:text-right w-full md:w-auto">
+                                        <p className="text-3xl font-black text-white italic mb-1">
+                                            {item.result.type === 'Score'
+                                                ? `${item.result.scoreWinner} - ${item.result.scoreLoser}`
+                                                : item.result.type}
                                         </p>
-                                        <p className="text-xs text-green-400 uppercase tracking-wider font-bold">Winner</p>
+                                        {item.roast && (
+                                            <p className="text-xs text-gray-500 italic">"{item.roast}"</p>
+                                        )}
                                     </div>
 
-                                    <div className="text-2xl font-black text-gray-700 italic">VS</div>
-
-                                    <div className="text-left">
-                                        <p className="text-xl md:text-2xl font-bold text-gray-400 line-through decoration-red-500/50 decoration-2">
-                                            {item.loser}
-                                        </p>
-                                        <p className="text-xs text-red-500 uppercase tracking-wider font-bold">Loser</p>
-                                    </div>
                                 </div>
-
-                                {/* Score & Quote */}
-                                <div className="text-center md:text-right w-full md:w-auto">
-                                    <p className="text-3xl font-black text-white italic mb-1">
-                                        {item.score}
-                                    </p>
-                                    <p className="text-xs text-gray-500 italic">"{item.quote}"</p>
-                                </div>
-
                             </div>
-                        </div>
-                    ))}
+                        ))
+                    )}
                 </div>
 
                 {/* Footer CTA */}
